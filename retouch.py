@@ -3,7 +3,6 @@ import numpy as np
 import cv2
 from PIL import Image
 from PIL import ImageEnhance
-from regex import P
 from config import Config
 
 class skinRetouch:
@@ -134,22 +133,17 @@ class skinRetouch:
 
 # 连通域区分不同人的脸部区域
 def distinguish_faces(mask_path):
-    mask, mask1 = cv2.imread(mask_path), cv2.imread(mask_path)
+    mask = cv2.imread(mask_path, flags=cv2.IMREAD_GRAYSCALE)
+    print(mask.shape)
     # fcn获取人脸具体区域，将非人脸区域设置为0
-    mask[mask1 != 13] = 0
-    mask[mask1 == 13] = 255
-
-
-    # for i in range(1, 256):
-    #     if i in mask:
-    #         print(i)
-
+    mask[mask != 13] = 0
+    mask[mask == 13] = 255
     cv2.imwrite(mask_path.replace(".png", "_test.png"), mask)
     # 连通域分析
-    mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
     num_labels,labels,stats,centers = cv2.connectedComponentsWithStats(mask, connectivity=8,ltype=cv2.CV_32S)
     # 判断连通域是否属于脸部，目前是通过连通域的面积来判断，大于10000认为是脸部的可能性较大
     faces = []
+    print(num_labels)
     for t in range(1, num_labels, 1):
         img_mask = mask
         img_mask[labels== t] = 13
@@ -159,32 +153,30 @@ def distinguish_faces(mask_path):
     print("不同人脸区分完成，一共有%s个人脸区域" % len(faces))
     return faces
 
+def check_mask(mask_path):
+     mask = cv2.imread(mask_path)
+     mask[mask == 13] = 255
+     cv2.imwrite(mask_path.replace(".png", "_check.png"),mask)
 
 
 if __name__ == "__main__":
     config = Config()  # 导入配置参数
     sr = skinRetouch(config)
-    # # 原图
-    # # img = r"skin_retouch\111.jpg"
-    # img = r"skin_retouch\111 - 1.jpg"
-    # # fcn图
-    # mask = r"skin_retouch\111_mask.png"
-    # blur = sr.blurred_with_mask(img, mask, kernal=(3,3))
-    # # blur = sr.blurred(img)
-    # retouch = sr.retouch(blur, 0)
-    # sr.remove_spot(retouch)
-
     # 两个脸部无连接
-    orgin_path = "XBP_6209_vis.png"
-    mask_path= r"24_mask.png"
-    # orgin_path =  r"skin_retouch\111 - 1.jpg"
-    # mask_path= r"skin_retouch\111_mask.png"
+    orgin_path = "muti_faces/raw/XBP_6209.jpg"
+    mask_path= "muti_faces/mask/XBP_6209.png"
+
+    check_mask(mask_path)
     # 区分多人脸，返回多人的mask_matrix
     mask_matrixs = distinguish_faces(mask_path)
-    # 对每个人的mask_matrix进行磨皮
-    for mask_matrix in mask_matrixs:
-        blur = sr.blurred_with_mask(orgin_path, mask_matrix, (3,3),12)
-        retouch = sr.retouch(blur, 0)
-        print("磨皮完成")
+    # # 对每个人的mask_matrix进行磨皮
+    # for mask_matrix in mask_matrixs:
+    #     blur = sr.blurred_with_mask(orgin_path, mask_matrix, (3,3),12)
+    #     retouch = sr.retouch(blur, 0)
+        # print("磨皮完成")
         # sr.remove_spot(retouch)
         # print("去除斑点完成")
+
+    # mask = np.array([[1,2,3,4],[13,13,12,11]])
+    # mask[mask == 13] = 255
+    # print(mask)
